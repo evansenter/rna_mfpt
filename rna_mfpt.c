@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../shared/constants.h"
+#include "constants.h"
 #include "mfpt_params.h"
 #include "mfpt_parser.h"
 #include "energy_grid_mfpt.h"
