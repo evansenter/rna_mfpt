@@ -4,7 +4,7 @@
 #include "constants.h"
 #include "mfpt_params.h"
 #include "mfpt_parser.h"
-#include "energy_grid_mfpt.h"
+#include "mfpt_energy_grid.h"
 
 int main(int argc, char* argv[]) {
   int i, j, line_count, row_length;

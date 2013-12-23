@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "mfpt_params.h"
+#include "mfpt_parser.h"
 
 int count_lines(char* file_path) {
   FILE *file = fopen(file_path, "r");

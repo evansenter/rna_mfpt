@@ -3,7 +3,7 @@
 #include <math.h>
 #include "constants.h"
 #include "mfpt_params.h"
-#include "energy_grid_mfpt.h"
+#include "mfpt_energy_grid.h"
 
 #ifdef __cplusplus
   extern "C" {
