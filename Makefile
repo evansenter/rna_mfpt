@@ -1,8 +1,10 @@
-CCFLAGS           = -c -std=c99 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q
+# Makefile for RNAmfpt
+
+CCFLAGS           = -c -std=c99 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I ../../h
 LDFLAGS           = -lm -lgomp -llapack -L/usr/local/include -llapacke -lgslcblas -lgsl -o
 BINDIR            = ~/bin # Change this to the BINDIR
 LIBDIR            = ~/lib # Change this to the LIBDIR
-CC                = gcc-4.9
+CC                = gcc
 GCC_VERSION      := $(shell expr `$(CC) -dumpversion`)
 CC_MAJ_VERSION   := $(shell expr `echo $(GCC_VERSION) | cut -d . -f 1` \* 10000)
 CC_MIN_VERSION   := $(shell expr `echo $(GCC_VERSION) | cut -d . -f 2` \* 100)
@@ -16,28 +18,26 @@ else
 	CCFLAGS += -O3
 endif
 
-all: RNAmfpt
-
-RNAmfpt: rna_mfpt.o mfpt_params.o energy_grid_mfpt.o mfpt_parser.o
-	$(CC) rna_mfpt.o mfpt_params.o energy_grid_mfpt.o $(LDFLAGS) RNAmfpt
-	ar cr libmfpt.a mfpt_parser.o energy_grid_mfpt.o mfpt_params.o
+RNAmfpt.out: rna_mfpt.o mfpt_params.o energy_grid_mfpt.o mfpt_parser.o
+	$(CC) rna_mfpt.o mfpt_params.o energy_grid_mfpt.o $(LDFLAGS) RNAmfpt.out
+	ar cr ../../lib/libmfpt.a mfpt_parser.o energy_grid_mfpt.o mfpt_params.o
 	
-rna_mfpt.o: rna_mfpt.c mfpt_parser.h energy_grid_mfpt.h constants.h mfpt_params.h
+rna_mfpt.o: rna_mfpt.c ../../h/mfpt_parser.h ../../h/energy_grid_mfpt.h ../../h/constants.h ../../h/mfpt_params.h
 	$(CC) $(CCFLAGS) rna_mfpt.c
 
-mfpt_parser.o: mfpt_parser.c mfpt_parser.h
+mfpt_parser.o: mfpt_parser.c ../../h/mfpt_parser.h
 	$(CC) $(CCFLAGS) mfpt_parser.c
 	
-mfpt_params.o: mfpt_params.c mfpt_params.h
+mfpt_params.o: mfpt_params.c ../../h/mfpt_params.h
 	$(CC) $(CCFLAGS) mfpt_params.c
 	
-energy_grid_mfpt.o: energy_grid_mfpt.c energy_grid_mfpt.h constants.h mfpt_params.h
+energy_grid_mfpt.o: energy_grid_mfpt.c ../../h/energy_grid_mfpt.h ../../h/constants.h ../../h/mfpt_params.h
 	$(CC) $(CCFLAGS) energy_grid_mfpt.c
 
 clean:
-	rm -f *.o libmfpt.a RNAmfpt
+	rm -f *.o ../../lib/libmfpt.a RNAmfpt.out
 
-install: RNAmfpt
-	cp RNAmfpt $(BINDIR)
-	cp libmfpt.a $(LIBDIR)
+install: RNAmfpt.out
+	cp RNAmfpt $(BINDIR)/RNAmfpt
+	cp ../../lib/libmfpt.a $(LIBDIR)
 	
