@@ -26,7 +26,7 @@ ifeq "$(GCC_GTEQ_4.9.0)" "1"
 endif
 
 RNAmfpt.out: rna_mfpt.o mfpt_params.o mfpt_energy_grid.o mfpt_parser.o
-	$(CC) rna_mfpt.o mfpt_params.o mfpt_energy_grid.o $(LDFLAGS) RNAmfpt.out
+	$(CC) rna_mfpt.o mfpt_parser.o mfpt_params.o mfpt_energy_grid.o $(LDFLAGS) RNAmfpt.out
 	ar cr $(LIB)/libmfpt.a mfpt_parser.o mfpt_energy_grid.o mfpt_params.o
 	
 rna_mfpt.o: rna_mfpt.c $(H)/mfpt_parser.h $(H)/mfpt_energy_grid.h $(H)/constants.h $(H)/mfpt_params.h
