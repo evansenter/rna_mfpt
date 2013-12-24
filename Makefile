@@ -1,20 +1,21 @@
 # Makefile for RNAmfpt
 
-CCFLAGS           = -c -std=c99 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I $(HEADER)
-LDFLAGS           = -lm -lgomp -llapack -L/usr/local/include -llapacke -lgslcblas -lgsl -o
-BINDIR            = ~/bin # Change this to the BINDIR
-LIBDIR            = ~/lib # Change this to the LIBDIR
-CC                = gcc
-GCC_VERSION      := $(shell expr `$(CC) -dumpversion`)
-CC_MAJ_VERSION   := $(shell expr `echo $(GCC_VERSION) | cut -d . -f 1` \* 10000)
-CC_MIN_VERSION   := $(shell expr `echo $(GCC_VERSION) | cut -d . -f 2` \* 100)
-CC_PATCH_VERSION := $(shell expr `echo $(GCC_VERSION) | cut -d . -f 3`)
-GCC_NUM_VERSION  := $(shell expr $(CC_MAJ_VERSION) \+ $(CC_MIN_VERSION) \+ $(CC_PATCH_VERSION))
-GCC_GTEQ_4.6.0   := $(shell expr $(GCC_NUM_VERSION) \>= 40600)
-GCC_GTEQ_4.9.0   := $(shell expr $(GCC_NUM_VERSION) \>= 40900)
-LIB              := ../../lib
-HEADER           := h
-CODE             := c
+CCFLAGS          = -c -std=c99 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I $(HEADER) -I $(SHARED_HEADER)
+LDFLAGS          = -lm -lgomp -llapack -L/usr/local/include -llapacke -lgslcblas -lgsl -o
+BINDIR           = ~/bin
+LIBDIR           = ~/lib
+CC               = gcc
+LIB              = ../../lib
+SHARED_HEADER    = ../../h
+HEADER           = h
+CODE             = c
+GCC_VERSION      = $(shell expr `$(CC) -dumpversion`)
+CC_MAJ_VERSION   = $(shell expr `echo $(GCC_VERSION) | cut -d . -f 1` \* 10000)
+CC_MIN_VERSION   = $(shell expr `echo $(GCC_VERSION) | cut -d . -f 2` \* 100)
+CC_PATCH_VERSION = $(shell expr `echo $(GCC_VERSION) | cut -d . -f 3`)
+GCC_NUM_VERSION  = $(shell expr $(CC_MAJ_VERSION) \+ $(CC_MIN_VERSION) \+ $(CC_PATCH_VERSION))
+GCC_GTEQ_4.6.0   = $(shell expr $(GCC_NUM_VERSION) \>= 40600)
+GCC_GTEQ_4.9.0   = $(shell expr $(GCC_NUM_VERSION) \>= 40900)
 
 ifeq "$(GCC_GTEQ_4.6.0)" "1"
 	CCFLAGS += -Ofast -march=native
