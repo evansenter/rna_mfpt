@@ -4,21 +4,10 @@
 #include "constants.h"
 #include "mfpt_params.h"
 #include "mfpt_energy_grid.h"
+#include "mfpt_initializers.h"
 
-#ifdef __cplusplus
-  extern "C" {
-    void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-    void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);  
-    int dgels_(char *t, int *m, int *n, int *nrhs, double *a, int *lda, double *b, int *ldb, double *work, int *lwork, int *info);
-  }
-#else
-  extern void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-  extern void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
-  extern int dgels_(char *t, int *m, int *n, int *nrhs, double *a, int *lda, double *b, int *ldb, double *work, int *lwork, int *info);
-#endif
-
-double** convert_energy_grid_to_transition_matrix(int** k, int** l, double** p, int* length, MFPT_PARAMETERS parameters) {
-  int i, j, m, bp_distance, input_data_index, pointer = 0, distance_from_start = -1, distance_from_end = -1, validPositions = 0;
+double** convert_energy_grid_to_transition_matrix(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS parameters) {
+  int i, j, m, bp_distance, input_data_index, start_index, end_index, resolved, distance_from_start = -1, distance_from_end = -1, pointer = 0, validPositions = 0;
   int* old_k;
   int* old_l;
   double row_sum, epsilon;
@@ -26,21 +15,23 @@ double** convert_energy_grid_to_transition_matrix(int** k, int** l, double** p, 
   double* number_of_adjacent_moves;
   double** transition_probabilities;
   
+  number_of_adjacent_moves = malloc(klp_matrix->length * sizeof(double));
+  
   if (parameters.single_bp_moves_only) {
     if (parameters.bp_dist) {
       bp_distance = parameters.bp_dist;
     } else {
-      for (i = 0; i < *length; ++i) {
-        if ((*k)[i] == 0) {
-          distance_from_end = (*l)[i];
-        }
+      resolved = find_start_and_end_positions_in_klp_matrix(*klp_matrix, parameters, &start_index, &end_index);
+    
+      if (start_index > 0) {
+        distance_from_start = klp_matrix->l[start_index];
+      }
       
-        if ((*l)[i] == 0) {
-          distance_from_start = (*k)[i];
-        }
+      if (end_index > 0) {
+        distance_from_end = klp_matrix->k[end_index];
       }
     
-      if (distance_from_start == distance_from_end && distance_from_start >= 0 && distance_from_end >= 0) {
+      if (distance_from_start == distance_from_end && resolved) {
         bp_distance = distance_from_start;
       } else if (distance_from_start >= 0 && distance_from_end == -1) {
         bp_distance = distance_from_start;
@@ -81,19 +72,19 @@ double** convert_energy_grid_to_transition_matrix(int** k, int** l, double** p, 
         #endif
       }
       
-      old_k = malloc(*length * sizeof(int));
-      old_l = malloc(*length * sizeof(int));
-      old_p = malloc(*length * sizeof(double));
+      old_k = malloc(klp_matrix->length * sizeof(int));
+      old_l = malloc(klp_matrix->length * sizeof(int));
+      old_p = malloc(klp_matrix->length * sizeof(double));
       
-      for (i = 0; i <= *length; ++i) {
-        old_k[i] = (*k)[i];
-        old_l[i] = (*l)[i];
-        old_p[i] = (*p)[i];
+      for (i = 0; i <= klp_matrix->length; ++i) {
+        old_k[i] = klp_matrix->k[i];
+        old_l[i] = klp_matrix->l[i];
+        old_p[i] = klp_matrix->p[i];
       }
       
-      *k = (int*)realloc(*k, validPositions * sizeof(int));
-      *l = (int*)realloc(*l, validPositions * sizeof(int));
-      *p = (double*)realloc(*p, validPositions * sizeof(double));
+      klp_matrix->k =    (int*)realloc(klp_matrix->k, validPositions * sizeof(int));
+      klp_matrix->l =    (int*)realloc(klp_matrix->l, validPositions * sizeof(int));
+      klp_matrix->p = (double*)realloc(klp_matrix->p, validPositions * sizeof(double));
       
       epsilon = (parameters.additive_epsilon ? parameters.additive_epsilon : parameters.distributed_epsilon / validPositions);
       
@@ -107,18 +98,18 @@ double** convert_energy_grid_to_transition_matrix(int** k, int** l, double** p, 
           ) {
             input_data_index = -1;
             
-            for (m = 0; m < *length && input_data_index == -1; ++m) {
+            for (m = 0; m < klp_matrix->length && input_data_index == -1; ++m) {
               if (old_k[m] == i && old_l[m] == j) {
                 input_data_index = m;
               }
             }
             
-            (*k)[pointer] = i;
-            (*l)[pointer] = j;
-            (*p)[pointer] = (input_data_index == -1 ? 0. : old_p[input_data_index]) + epsilon;
+            klp_matrix->k[pointer] = i;
+            klp_matrix->l[pointer] = j;
+            klp_matrix->p[pointer] = (input_data_index == -1 ? 0. : old_p[input_data_index]) + epsilon;
             
             if (!parameters.energy_based) {
-              (*p)[pointer] /= 1. + epsilon * validPositions;
+              klp_matrix->p[pointer] /= 1. + epsilon * validPositions;
             }
             
             pointer++;
@@ -130,53 +121,50 @@ double** convert_energy_grid_to_transition_matrix(int** k, int** l, double** p, 
       free(old_l);
       free(old_p);
       
-      *length = validPositions;
+      klp_matrix->length = validPositions;
     }
-    
-    number_of_adjacent_moves = malloc(*length * sizeof(double));
     
     #ifdef DEBUG
       printf("\nFull dataset:\n");
     #endif
   
-    for (i = 0; i < *length; ++i) {
-      number_of_adjacent_moves[i] = (double)number_of_permissible_single_bp_moves((*k)[i], (*l)[i], *k, *l, *length);
+    for (i = 0; i < klp_matrix->length; ++i) {
+      number_of_adjacent_moves[i] = (double)number_of_permissible_single_bp_moves(klp_matrix->k[i], klp_matrix->l[i], *klp_matrix);
     
       #ifdef DEBUG
-        printf("%d\t%d\t%.15f\t%d possible moves\n", (*k)[i], (*l)[i], (*p)[i], (int)number_of_adjacent_moves[i]);
+        printf("%d\t%d\t%.15f\t%d possible moves\n", klp_matrix->k[i], klp_matrix->l[i], klp_matrix->p[i], (int)number_of_adjacent_moves[i]);
       #endif
     }
   }
   
-  transition_probabilities = malloc(*length * sizeof(double*));
+  transition_probabilities = init_transition_matrix(klp_matrix->length);
   
-  for (i = 0; i < *length; ++i) {
-    row_sum                     = 0.;
-    transition_probabilities[i] = calloc(*length, sizeof(double));
+  for (i = 0; i < klp_matrix->length; ++i) {
+    row_sum = 0.;
       
-    for (j = 0; j < *length; ++j) {
+    for (j = 0; j < klp_matrix->length; ++j) {
       if (i != j) {
         if (parameters.single_bp_moves_only) {
-          if ((int)abs((*k)[i] - (*k)[j]) == 1 && (int)abs((*l)[i] - (*l)[j]) == 1) {
+          if ((int)abs(klp_matrix->k[i] - klp_matrix->k[j]) == 1 && (int)abs(klp_matrix->l[i] - klp_matrix->l[j]) == 1) {
             if (parameters.hastings) {
               if (parameters.energy_based) {
-                transition_probabilities[i][j] = transition_rate_from_energies_with_hastings((*p)[i], (*p)[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
+                transition_probabilities[i][j] = transition_rate_from_energies_with_hastings(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
               } else {
-                transition_probabilities[i][j] = transition_rate_from_probabilities_with_hastings((*p)[i], (*p)[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
+                transition_probabilities[i][j] = transition_rate_from_probabilities_with_hastings(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
               }
             } else {
               if (parameters.energy_based) {
-                transition_probabilities[i][j] = transition_rate_from_energies((*p)[i], (*p)[j], number_of_adjacent_moves[i]);
+                transition_probabilities[i][j] = transition_rate_from_energies(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i]);
               } else {
-                transition_probabilities[i][j] = transition_rate_from_probabilities((*p)[i], (*p)[j], number_of_adjacent_moves[i]);
+                transition_probabilities[i][j] = transition_rate_from_probabilities(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i]);
               }
             }
           }
         } else {
           if (parameters.energy_based) {
-            transition_probabilities[i][j] = transition_rate_from_energies((*p)[i], (*p)[j], (double)(*length - 1));
+            transition_probabilities[i][j] = transition_rate_from_energies(klp_matrix->p[i], klp_matrix->p[j], (double)(klp_matrix->length - 1));
           } else {
-            transition_probabilities[i][j] = transition_rate_from_probabilities((*p)[i], (*p)[j], (double)(*length - 1));
+            transition_probabilities[i][j] = transition_rate_from_probabilities(klp_matrix->p[i], klp_matrix->p[j], (double)(klp_matrix->length - 1));
           }
         }
         
@@ -190,47 +178,26 @@ double** convert_energy_grid_to_transition_matrix(int** k, int** l, double** p, 
   return transition_probabilities;
 }
 
-double compute_mfpt(int* k, int* l, double **transition_probabilities, int length, MFPT_PARAMETERS parameters) {
-  int i, j, x, y, start_index, end_index, inversion_matrix_row_length = length - 1;
+double compute_mfpt(KLP_MATRIX klp_matrix, MFPT_PARAMETERS parameters, double **transition_probabilities) {
+  int i, j, x, y, start_index, end_index, resolved, inversion_matrix_row_length = klp_matrix.length - 1;
   double mfpt_from_start;
   
-  if (parameters.start_state == -1) {
-    for (i = 0, start_index = -1; i < length; ++i) {
-      if (k[i] == 0) {
-        start_index = i;
-      }
+  resolved = find_start_and_end_positions_in_klp_matrix(klp_matrix, parameters, &start_index, &end_index);
+  
+  if (resolved != 2) {
+    if (start_index < 0) {
+      #ifdef DEBUG
+        fprintf(stderr, "We can not find any position in the energy grid correspondent to the starting state.\n");
+      #endif
+      return -1;
     }
-  } else {
-    start_index = parameters.start_state;
-  }
   
-  if (parameters.end_state == -1) {
-    for (i = 0, end_index = -1; i < length; ++i) {
-      if (l[i] == 0) {
-        end_index = i;
-      }
+    if (end_index < 0) {
+      #ifdef DEBUG
+        fprintf(stderr, "We can not find any position in the energy grid correspondent to the stopping state.\n");
+      #endif
+      return -2;
     }
-  } else {
-    end_index = parameters.end_state;
-  }
-  
-  #ifdef DEBUG
-    printf("\nstart_index:\t%d\n", start_index);
-    printf("end_index:\t%d\n", end_index);
-  #endif
-  
-  if (start_index < 0) {
-    #ifdef DEBUG
-      fprintf(stderr, "We can not find any position in the energy grid correspondent to the starting state.\n");
-    #endif
-    return -1;
-  }
-  
-  if (end_index < 0) {
-    #ifdef DEBUG
-      fprintf(stderr, "We can not find any position in the energy grid correspondent to the stopping state.\n");
-    #endif
-    return -2;
   }
   
   // If start_index > end_index, we need to shift to the left by one because the end_index row / column is being removed.
@@ -241,29 +208,16 @@ double compute_mfpt(int* k, int* l, double **transition_probabilities, int lengt
   double *mfpt             = calloc(inversion_matrix_row_length, sizeof(double));
   double *inversion_matrix = malloc((int)pow((double)inversion_matrix_row_length, 2.) * sizeof(double));
   
-  #ifdef SUPER_HEAVY_DEBUG
-    printf("Inversion matrix:\n");
-    printf("i\tj\tx\ty\tinversion_matrix[x, y]\n");
-  #endif
-  
-  for (i = 0; i < length; ++i) {
-    for (j = 0; j < length; ++j) { 
+  for (i = 0; i < klp_matrix.length; ++i) {
+    for (j = 0; j < klp_matrix.length; ++j) { 
       if (i != end_index && j != end_index) {
         x = (i > end_index ? i - 1 : i);
         y = (j > end_index ? j - 1 : j);
         
         // Be VERY careful changing anything here. We throw out anything at base pair distance 0 (end_index) from the second structure (the target of the MFPT calculation) and maximally distant from the first structure. Because of this, there's a chunk of indices that need to get shifted to the left by one, to keep the array tight (this is what x, y are doing). Hence, x and y are used for indexing into inversion_matrix and i, j are used for indexing into transition_probabilities.
         inversion_matrix[x * inversion_matrix_row_length + y] = (i == j ? 1 - transition_probabilities[i][j] : -transition_probabilities[i][j]);
-        
-        #ifdef SUPER_HEAVY_DEBUG
-          printf("%d\t%d\t%d\t%d\t%f\n", i, j, x, y, inversion_matrix[x * inversion_matrix_row_length + y]);
-        #endif
       }
     }
-    
-    #ifdef SUPER_HEAVY_DEBUG
-      printf("\n");
-    #endif
   }
   
   inversion_matrix = parameters.pseudoinverse ? pseudoinverse(inversion_matrix, inversion_matrix_row_length) : inverse(inversion_matrix, inversion_matrix_row_length);
@@ -362,12 +316,12 @@ double* pseudoinverse(double* a, int size) {
   return(b);
 }
 
-int number_of_permissible_single_bp_moves(int x, int y, int* k, int* l, int length) {
+int number_of_permissible_single_bp_moves(int x, int y, KLP_MATRIX klp_matrix) {
   int j, a, b, num_moves = 0;
   
-  for (j = 0; j < length; ++j) {
-    a = k[j];
-    b = l[j];
+  for (j = 0; j < klp_matrix.length; ++j) {
+    a = klp_matrix.k[j];
+    b = klp_matrix.l[j];
     
     if (
       // Because N(x, y) is restricted to entries in *k and *l, we *assume* the input data satisfies the triangle inequality and bounds.
@@ -378,6 +332,42 @@ int number_of_permissible_single_bp_moves(int x, int y, int* k, int* l, int leng
   }
   
   return num_moves;
+}
+
+int find_start_and_end_positions_in_klp_matrix(KLP_MATRIX klp_matrix, MFPT_PARAMETERS parameters, int* start_index, int* end_index) {
+  int i, resolved = 0;
+  
+  if (parameters.start_state == -1) {
+    for (i = 0, *start_index = -1; i < klp_matrix.length && *start_index < 0; ++i) {
+      if (klp_matrix.k[i] == 0) {
+        *start_index = i;
+        resolved++;
+      }
+    }
+  } else {
+    *start_index = parameters.start_state;
+    resolved++;
+  }
+  
+  if (parameters.end_state == -1) {
+    for (i = 0, *end_index = -1; i < klp_matrix.length && *end_index < 0; ++i) {
+      if (klp_matrix.l[i] == 0) {
+        *end_index = i;
+        resolved++;
+      }
+    }
+  } else {
+    *end_index = parameters.end_state;
+    resolved++;
+  }
+  
+  #ifdef DEBUG
+    printf("\nstart_index:\t%d\n", *start_index);
+    printf("end_index:\t%d\n", *end_index);
+    printf("resolved:\t%d\n", resolved);
+  #endif
+    
+  return resolved;
 }
 
 double transition_rate_from_probabilities(double from, double to, double num_from) {

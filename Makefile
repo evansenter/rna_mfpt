@@ -25,12 +25,15 @@ ifeq "$(GCC_GTEQ_4.9.0)" "1"
 	CCFLAGS += -fdiagnostics-color=always
 endif
 
-RNAmfpt.out: rna_mfpt.o mfpt_params.o mfpt_energy_grid.o mfpt_parser.o
-	$(CC) rna_mfpt.o mfpt_parser.o mfpt_params.o mfpt_energy_grid.o $(LDFLAGS) RNAmfpt.out
-	ar cr $(LIB)/libmfpt.a mfpt_parser.o mfpt_energy_grid.o mfpt_params.o
+RNAmfpt.out: rna_mfpt.o mfpt_params.o mfpt_energy_grid.o mfpt_parser.o mfpt_initializers.o
+	$(CC) rna_mfpt.o mfpt_parser.o mfpt_params.o mfpt_energy_grid.o mfpt_initializers.o $(LDFLAGS) RNAmfpt.out
+	ar cr $(LIB)/libmfpt.a mfpt_parser.o mfpt_energy_grid.o mfpt_params.o mfpt_initializers.o
 	
-rna_mfpt.o: rna_mfpt.c $(H)/mfpt_parser.h $(H)/mfpt_energy_grid.h $(H)/constants.h $(H)/mfpt_params.h
+rna_mfpt.o: rna_mfpt.c $(H)/mfpt_parser.h $(H)/mfpt_energy_grid.h $(H)/constants.h $(H)/mfpt_params.h $(H)/mfpt_initializers.h
 	$(CC) $(CCFLAGS) rna_mfpt.c
+
+mfpt_initializers.o: mfpt_initializers.c $(H)/mfpt_initializers.h
+	$(CC) $(CCFLAGS) mfpt_initializers.c
 
 mfpt_parser.o: mfpt_parser.c $(H)/mfpt_parser.h
 	$(CC) $(CCFLAGS) mfpt_parser.c
@@ -38,7 +41,7 @@ mfpt_parser.o: mfpt_parser.c $(H)/mfpt_parser.h
 mfpt_params.o: mfpt_params.c $(H)/mfpt_params.h
 	$(CC) $(CCFLAGS) mfpt_params.c
 	
-mfpt_energy_grid.o: mfpt_energy_grid.c $(H)/mfpt_energy_grid.h $(H)/constants.h $(H)/mfpt_params.h
+mfpt_energy_grid.o: mfpt_energy_grid.c $(H)/mfpt_energy_grid.h $(H)/constants.h $(H)/mfpt_params.h $(H)/mfpt_initializers.h
 	$(CC) $(CCFLAGS) mfpt_energy_grid.c
 
 clean:

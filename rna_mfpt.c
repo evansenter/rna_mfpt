@@ -4,16 +4,15 @@
 #include "constants.h"
 #include "mfpt_params.h"
 #include "mfpt_parser.h"
+#include "mfpt_initializers.h"
 #include "mfpt_energy_grid.h"
 
 int main(int argc, char* argv[]) {
-  int i, j, line_count, row_length;
-  int* k;
-  int* l;
+  int i, line_count, row_length;
   double mfpt;
-  double* p;
   double** transition_matrix;
   MFPT_PARAMETERS parameters;
+  KLP_MATRIX klp_matrix;
   
   parameters = parse_mfpt_args(argc, argv);
   line_count = count_lines(argv[argc - 1]);
@@ -23,17 +22,11 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   
-  k = malloc(line_count * sizeof(int));
-  l = malloc(line_count * sizeof(int));
-  p = malloc(line_count * sizeof(double));
-  
-  populate_arrays(argv[argc - 1], k, l, p, parameters);
+  klp_matrix = init_klp_matrix(line_count);
+  populate_arrays(argv[argc - 1], klp_matrix, parameters);
   
   #ifdef SUPER_HEAVY_DEBUG
-    printf("\nInput data:\n");
-    for (i = 0; i < line_count; ++i) {
-      printf("%d\t%d\t%.8f\n", k[i], l[i], p[i]);
-    }
+    print_klp_matrix(klp_matrix);
   #endif
   
   // We already have a transition matrix, this is the easy case. Just need to find MFPT.
@@ -41,54 +34,30 @@ int main(int argc, char* argv[]) {
     // We need to infer the dimensions of the transition matrix.
     row_length = 0;
     for (i = 0; i < line_count; ++i) {
-      row_length = k[i] > row_length ? k[i] : row_length;
-      row_length = l[i] > row_length ? l[i] : row_length;
+      row_length = klp_matrix.k[i] > row_length ? klp_matrix.k[i] : row_length;
+      row_length = klp_matrix.l[i] > row_length ? klp_matrix.l[i] : row_length;
     }
     row_length++;
     
-    transition_matrix = malloc(row_length * sizeof(double*));
-    for (i = 0; i < row_length + 1; ++i) {
-      transition_matrix[i] = calloc(row_length, sizeof(double));
-    }
-    
+    transition_matrix = init_transition_matrix(row_length);
     for (i = 0; i < line_count; ++i) {
-      transition_matrix[k[i]][l[i]] = p[i];
+      transition_matrix[klp_matrix.k[i]][klp_matrix.l[i]] = klp_matrix.p[i];
     }
-    
-    #if SUPER_HEAVY_DEBUG
-      printf("Transition matrix:\n");
-      printf("(x)\t(y)\tp(x . y)\n");
-      
-      for (i = 0; i < line_count; ++i) {
-        printf("(%d)\t=>\t(%d)\t%.8f\n", k[i], l[i], transition_matrix[k[i]][l[i]]);
-      }
-    #endif
   // We have an energy grid, this requires converting the energy grid into a transition matrix data structure before finding MFPT.
   } else {
     row_length        = line_count;
-    transition_matrix = convert_energy_grid_to_transition_matrix(&k, &l, &p, &row_length, parameters);
-    
-    #if SUPER_HEAVY_DEBUG
-      printf("Transition matrix:\n");
-      printf("i\tj\t(x, y)\t(a, b)\tp((x, y) . (a, b))\n");
-
-      for (i = 0; i < row_length; ++i) {
-        for (j = 0; j < row_length; ++j) {
-          printf("%d\t%d\t(%d, %d)\t=>\t(%d, %d)\t%.8f\n", i, j, k[i], l[i], k[j], l[j], transition_matrix[i][j]);
-        }
-  
-        printf("\n");
-      }
-    #endif
+    transition_matrix = convert_energy_grid_to_transition_matrix(&klp_matrix, parameters);
   }
   
-  mfpt = compute_mfpt(k, l, transition_matrix, row_length, parameters);
+  #if SUPER_HEAVY_DEBUG
+    print_transition_matrix(klp_matrix, transition_matrix);
+  #endif
+  
+  mfpt = compute_mfpt(klp_matrix, parameters, transition_matrix);
   printf("%+.8f\n", mfpt);
   
-  free(transition_matrix);
-  free(k);
-  free(l);
-  free(p);
-  
+  free_klp_matrix(klp_matrix);
+  free_transition_matrix(transition_matrix, row_length);
+    
   return 0;
 }
