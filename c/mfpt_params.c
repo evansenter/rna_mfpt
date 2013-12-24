@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "mfpt_params.h"
+#include "params.h"
 
 MFPT_PARAMETERS init_mfpt_params() {
   MFPT_PARAMETERS parameters = {
@@ -254,7 +254,7 @@ void mfpt_usage() {
   
   fprintf(stderr, "-T\ttransition matrix input, the default is disabled. If this flag is provided, the input is expected to be a transition probability matrix, rather than a 2D energy grid. In this case, the first two columns in the CSV file are row-order indices into the transition probability matrix, and the third (final) column is the transition probability of that cell.\n");
   
-  fprintf(stderr, "-V\tverbose, the default is disabled. If this flag is provided, light debug data will be printed. To enable heavy debugging, use the flags in constants.h\n");
+  fprintf(stderr, "-V\tverbose, the default is disabled. If this flag is provided, light debug data will be printed. To enable heavy debugging, use the flags in mfpt_constants.h\n");
   
   fprintf(stderr, "-X\tsingle basepair moves, the default is disabled. If this flag is provided, the input must be in the form of an energy grid, and only diagonally adjacent moves are permitted. This option makes the assumption that the input is *not* a transition probability matrix already, and the input energy grid already satisfies the triangle inequality / parity condition.\n");
 

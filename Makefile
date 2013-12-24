@@ -1,6 +1,6 @@
 # Makefile for RNAmfpt
 
-CCFLAGS           = -c -std=c99 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I $(H)
+CCFLAGS           = -c -std=c99 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I $(HEADER)
 LDFLAGS           = -lm -lgomp -llapack -L/usr/local/include -llapacke -lgslcblas -lgsl -o
 BINDIR            = ~/bin # Change this to the BINDIR
 LIBDIR            = ~/lib # Change this to the LIBDIR
@@ -13,7 +13,8 @@ GCC_NUM_VERSION  := $(shell expr $(CC_MAJ_VERSION) \+ $(CC_MIN_VERSION) \+ $(CC_
 GCC_GTEQ_4.6.0   := $(shell expr $(GCC_NUM_VERSION) \>= 40600)
 GCC_GTEQ_4.9.0   := $(shell expr $(GCC_NUM_VERSION) \>= 40900)
 LIB              := ../../lib
-H                := ../../h
+HEADER           := h
+CODE             := c
 
 ifeq "$(GCC_GTEQ_4.6.0)" "1"
 	CCFLAGS += -Ofast -march=native
@@ -25,27 +26,27 @@ ifeq "$(GCC_GTEQ_4.9.0)" "1"
 	CCFLAGS += -fdiagnostics-color=always
 endif
 
-RNAmfpt.out: rna_mfpt.o mfpt_params.o mfpt_energy_grid.o mfpt_parser.o mfpt_initializers.o
-	$(CC) rna_mfpt.o mfpt_parser.o mfpt_params.o mfpt_energy_grid.o mfpt_initializers.o $(LDFLAGS) RNAmfpt.out
-	ar cr $(LIB)/libmfpt.a mfpt_parser.o mfpt_energy_grid.o mfpt_params.o mfpt_initializers.o
+RNAmfpt.out: $(CODE)/rna_mfpt.o $(CODE)/mfpt_params.o $(CODE)/mfpt_energy_grid.o $(CODE)/mfpt_parser.o $(CODE)/mfpt_initializers.o
+	$(CC) $(CODE)/rna_mfpt.o $(CODE)/mfpt_parser.o $(CODE)/mfpt_params.o $(CODE)/mfpt_energy_grid.o $(CODE)/mfpt_initializers.o $(LDFLAGS) RNAmfpt.out
+	ar cr $(LIB)/libmfpt.a $(CODE)/mfpt_parser.o $(CODE)/mfpt_energy_grid.o $(CODE)/mfpt_params.o $(CODE)/mfpt_initializers.o
 	
-rna_mfpt.o: rna_mfpt.c $(H)/mfpt_parser.h $(H)/mfpt_energy_grid.h $(H)/constants.h $(H)/mfpt_params.h $(H)/mfpt_initializers.h
-	$(CC) $(CCFLAGS) rna_mfpt.c
+$(CODE)/rna_mfpt.o: $(CODE)/rna_mfpt.c $(HEADER)/parser.h $(HEADER)/energy_grid.h $(HEADER)/constants.h $(HEADER)/params.h $(HEADER)/initializers.h
+	$(CC) $(CCFLAGS) $(CODE)/rna_mfpt.c -o $(CODE)/rna_mfpt.o
 
-mfpt_initializers.o: mfpt_initializers.c $(H)/mfpt_initializers.h
-	$(CC) $(CCFLAGS) mfpt_initializers.c
+$(CODE)/mfpt_initializers.o: $(CODE)/mfpt_initializers.c $(HEADER)/initializers.h
+	$(CC) $(CCFLAGS) $(CODE)/mfpt_initializers.c -o $(CODE)/mfpt_initializers.o
 
-mfpt_parser.o: mfpt_parser.c $(H)/mfpt_parser.h
-	$(CC) $(CCFLAGS) mfpt_parser.c
+$(CODE)/mfpt_parser.o: $(CODE)/mfpt_parser.c $(HEADER)/parser.h
+	$(CC) $(CCFLAGS) $(CODE)/mfpt_parser.c -o $(CODE)/mfpt_parser.o
 	
-mfpt_params.o: mfpt_params.c $(H)/mfpt_params.h
-	$(CC) $(CCFLAGS) mfpt_params.c
+$(CODE)/mfpt_params.o: $(CODE)/mfpt_params.c $(HEADER)/params.h
+	$(CC) $(CCFLAGS) $(CODE)/mfpt_params.c -o $(CODE)/mfpt_params.o
 	
-mfpt_energy_grid.o: mfpt_energy_grid.c $(H)/mfpt_energy_grid.h $(H)/constants.h $(H)/mfpt_params.h $(H)/mfpt_initializers.h
-	$(CC) $(CCFLAGS) mfpt_energy_grid.c
+$(CODE)/mfpt_energy_grid.o: $(CODE)/mfpt_energy_grid.c $(HEADER)/energy_grid.h $(HEADER)/constants.h $(HEADER)/params.h $(HEADER)/initializers.h
+	$(CC) $(CCFLAGS) $(CODE)/mfpt_energy_grid.c -o $(CODE)/mfpt_energy_grid.o
 
 clean:
-	rm -f *.o $(LIB)/libmfpt.a RNAmfpt.out
+	rm -f $(CODE)/*.o $(LIB)/libmfpt.a RNAmfpt.out
 
 install: RNAmfpt.out
 	cp RNAmfpt $(BINDIR)/RNAmfpt

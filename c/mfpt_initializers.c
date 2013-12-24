@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "mfpt_initializers.h"
+#include "initializers.h"
 
 KLP_MATRIX init_klp_matrix(int length) {
   KLP_MATRIX klp_matrix = {

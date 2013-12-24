@@ -2,10 +2,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include "constants.h"
-#include "mfpt_params.h"
-#include "mfpt_parser.h"
-#include "mfpt_initializers.h"
-#include "mfpt_energy_grid.h"
+#include "params.h"
+#include "parser.h"
+#include "initializers.h"
+#include "energy_grid.h"
 
 int main(int argc, char* argv[]) {
   int i, line_count, row_length;
