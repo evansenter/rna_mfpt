@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "params.h"
 
 MFPT_PARAMETERS init_mfpt_params() {

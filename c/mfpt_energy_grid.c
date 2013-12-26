@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <unistd.h>
 #include "constants.h"
-#include "params.h"
-#include "energy_grid.h"
 #include "initializers.h"
+#include "energy_grid.h"
 
 double** convert_energy_grid_to_transition_matrix(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS parameters) {
   int i, j, m, bp_distance, input_data_index, start_index, end_index, resolved, distance_from_start = -1, distance_from_end = -1, pointer = 0, validPositions = 0;

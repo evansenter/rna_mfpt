@@ -1,7 +1,4 @@
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "constants.h"
 #include "params.h"
 #include "parser.h"
 #include "initializers.h"
