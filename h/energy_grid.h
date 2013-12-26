@@ -15,8 +15,8 @@ int dgels_(char* t, int* m, int* n, int* nrhs, double* a, int* lda, double* b, i
 }
 #endif
 
-double** convert_energy_grid_to_transition_matrix(KLP_MATRIX*, MFPT_PARAMETERS);
-double compute_mfpt(KLP_MATRIX, MFPT_PARAMETERS, double**);
+double* convert_energy_grid_to_transition_matrix(KLP_MATRIX*, MFPT_PARAMETERS);
+double compute_mfpt(KLP_MATRIX, MFPT_PARAMETERS, double*);
 double* inverse(double*, int);
 double* pseudoinverse(double*, int);
 int number_of_permissible_single_bp_moves(int, int, KLP_MATRIX);

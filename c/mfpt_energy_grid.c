@@ -6,14 +6,14 @@
 #include "initializers.h"
 #include "energy_grid.h"
 
-double** convert_energy_grid_to_transition_matrix(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS parameters) {
+double* convert_energy_grid_to_transition_matrix(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS parameters) {
   int i, j, m, bp_distance, input_data_index, start_index, end_index, resolved, distance_from_start = -1, distance_from_end = -1, pointer = 0, validPositions = 0;
   int* old_k;
   int* old_l;
   double row_sum, epsilon;
   double* old_p;
   double* number_of_adjacent_moves;
-  double** transition_probabilities;
+  double* transition_probabilities;
   number_of_adjacent_moves = malloc(klp_matrix->length * sizeof(double));
   
   if (parameters.single_bp_moves_only) {
@@ -145,37 +145,43 @@ double** convert_energy_grid_to_transition_matrix(KLP_MATRIX* klp_matrix, MFPT_P
           if ((int)abs(klp_matrix->k[i] - klp_matrix->k[j]) == 1 && (int)abs(klp_matrix->l[i] - klp_matrix->l[j]) == 1) {
             if (parameters.hastings) {
               if (parameters.energy_based) {
-                transition_probabilities[i][j] = transition_rate_from_energies_with_hastings(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
+                ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
+                    transition_rate_from_energies_with_hastings(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
               } else {
-                transition_probabilities[i][j] = transition_rate_from_probabilities_with_hastings(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
+                ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
+                    transition_rate_from_probabilities_with_hastings(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
               }
             } else {
               if (parameters.energy_based) {
-                transition_probabilities[i][j] = transition_rate_from_energies(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i]);
+                ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
+                    transition_rate_from_energies(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i]);
               } else {
-                transition_probabilities[i][j] = transition_rate_from_probabilities(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i]);
+                ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
+                    transition_rate_from_probabilities(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i]);
               }
             }
           }
         } else {
           if (parameters.energy_based) {
-            transition_probabilities[i][j] = transition_rate_from_energies(klp_matrix->p[i], klp_matrix->p[j], (double)(klp_matrix->length - 1));
+            ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
+                transition_rate_from_energies(klp_matrix->p[i], klp_matrix->p[j], (double)(klp_matrix->length - 1));
           } else {
-            transition_probabilities[i][j] = transition_rate_from_probabilities(klp_matrix->p[i], klp_matrix->p[j], (double)(klp_matrix->length - 1));
+            ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
+                transition_rate_from_probabilities(klp_matrix->p[i], klp_matrix->p[j], (double)(klp_matrix->length - 1));
           }
         }
         
-        row_sum += transition_probabilities[i][j];
+        row_sum += ROW_ORDER(transition_probabilities, i, j, klp_matrix->length);
       }
     }
     
-    transition_probabilities[i][i] = 1 - row_sum;
+    ROW_ORDER(transition_probabilities, i, i, klp_matrix->length) = 1 - row_sum;
   }
   
   return transition_probabilities;
 }
 
-double compute_mfpt(KLP_MATRIX klp_matrix, MFPT_PARAMETERS parameters, double** transition_probabilities) {
+double compute_mfpt(KLP_MATRIX klp_matrix, MFPT_PARAMETERS parameters, double* transition_probabilities) {
   int i, j, x, y, start_index, end_index, resolved, inversion_matrix_row_length = klp_matrix.length - 1;
   double mfpt_from_start;
   resolved = find_start_and_end_positions_in_klp_matrix(klp_matrix, parameters, &start_index, &end_index);
@@ -210,7 +216,8 @@ double compute_mfpt(KLP_MATRIX klp_matrix, MFPT_PARAMETERS parameters, double** 
         x = (i > end_index ? i - 1 : i);
         y = (j > end_index ? j - 1 : j);
         // Be VERY careful changing anything here. We throw out anything at base pair distance 0 (end_index) from the second structure (the target of the MFPT calculation) and maximally distant from the first structure. Because of this, there's a chunk of indices that need to get shifted to the left by one, to keep the array tight (this is what x, y are doing). Hence, x and y are used for indexing into inversion_matrix and i, j are used for indexing into transition_probabilities.
-        inversion_matrix[x * inversion_matrix_row_length + y] = (i == j ? 1 - transition_probabilities[i][j] : -transition_probabilities[i][j]);
+        inversion_matrix[x * inversion_matrix_row_length + y] = \
+            (i == j ? 1 - ROW_ORDER(transition_probabilities, i, j, klp_matrix.length) : -ROW_ORDER(transition_probabilities, i, j, klp_matrix.length));
       }
     }
   }

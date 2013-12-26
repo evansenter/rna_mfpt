@@ -27,34 +27,20 @@ void print_klp_matrix(KLP_MATRIX klp_matrix) {
   }
 }
 
-double** init_transition_matrix(int length) {
-  int i;
-  double** transition_matrix;
-  transition_matrix = malloc(length * sizeof(double*));
-
-  for (i = 0; i < length; ++i) {
-    transition_matrix[i] = calloc(length, sizeof(double));
-  }
-
-  return transition_matrix;
+double* init_transition_matrix(int length) {
+  return calloc(length * length, sizeof(double));;
 }
 
-void free_transition_matrix(double** transition_matrix, int length) {
-  int i;
-
-  for (i = 0; i < length; ++i) {
-    free(transition_matrix[i]);
-  }
-
+void free_transition_matrix(double* transition_matrix) {
   free(transition_matrix);
 }
 
-void print_transition_matrix(KLP_MATRIX klp_matrix, double** transition_matrix) {
+void print_transition_matrix(KLP_MATRIX klp_matrix, double* transition_matrix) {
   int i;
   printf("Transition matrix:\n");
   printf("(x)\t(y)\tp(x, y)\n");
 
   for (i = 0; i < klp_matrix.length; ++i) {
-    printf("(%d)\t=>\t(%d)\t%.8f\n", klp_matrix.k[i], klp_matrix.l[i], transition_matrix[klp_matrix.k[i]][klp_matrix.l[i]]);
+    printf("(%d)\t=>\t(%d)\t%.8f\n", klp_matrix.k[i], klp_matrix.l[i], ROW_ORDER(transition_matrix, klp_matrix.k[i], klp_matrix.l[i], klp_matrix.length));
   }
 }

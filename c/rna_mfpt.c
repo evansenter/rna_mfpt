@@ -7,7 +7,7 @@
 int main(int argc, char* argv[]) {
   int i, line_count, row_length;
   double mfpt;
-  double** transition_matrix;
+  double* transition_matrix;
   MFPT_PARAMETERS parameters;
   KLP_MATRIX klp_matrix;
   parameters = parse_mfpt_args(argc, argv);
@@ -34,16 +34,16 @@ int main(int argc, char* argv[]) {
       row_length = klp_matrix.l[i] > row_length ? klp_matrix.l[i] : row_length;
     }
     
-    row_length++;
-    transition_matrix = init_transition_matrix(row_length);
+    // The transition matrix is 0-ordered, so we looked for the highest k, l position above and then we add one for the row length.
+    klp_matrix.length = ++row_length;
+    transition_matrix = init_transition_matrix(klp_matrix.length);
     
     for (i = 0; i < line_count; ++i) {
-      transition_matrix[klp_matrix.k[i]][klp_matrix.l[i]] = klp_matrix.p[i];
+      ROW_ORDER(transition_matrix, klp_matrix.k[i], klp_matrix.l[i], klp_matrix.length) = klp_matrix.p[i];
     }
     
     // We have an energy grid, this requires converting the energy grid into a transition matrix data structure before finding MFPT.
   } else {
-    row_length        = line_count;
     transition_matrix = convert_energy_grid_to_transition_matrix(&klp_matrix, parameters);
   }
   
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
   #endif
   mfpt = compute_mfpt(klp_matrix, parameters, transition_matrix);
   printf("%+.8f\n", mfpt);
+  free_transition_matrix(transition_matrix);
   free_klp_matrix(klp_matrix);
-  free_transition_matrix(transition_matrix, row_length);
   return 0;
 }
