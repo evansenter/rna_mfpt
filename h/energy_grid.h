@@ -20,6 +20,7 @@ double compute_mfpt(KLP_MATRIX*, MFPT_PARAMETERS, double*);
 double* inverse(double*, int);
 double* pseudoinverse(double*, int);
 int find_start_and_end_positions_in_klp_matrix(KLP_MATRIX*, MFPT_PARAMETERS, int*, int*);
+void set_bp_dist_from_start_and_end_positions(KLP_MATRIX, MFPT_PARAMETERS*, int, int, int);
 void extend_klp_matrix_to_all_possible_positions(KLP_MATRIX*, MFPT_PARAMETERS);
 int number_of_permissible_single_bp_moves(KLP_MATRIX*, int);
 double radial_probability(KLP_MATRIX*, int, int);

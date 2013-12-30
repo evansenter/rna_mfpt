@@ -9,44 +9,25 @@
 #define DEBUG 1;
 
 double* convert_energy_grid_to_transition_matrix(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS* parameters) {
-  int i, j, start_index, end_index, resolved, distance_from_start = -1, distance_from_end = -1;
+  int i, j, start_index, end_index, resolved;
   double row_sum;
   double* number_of_adjacent_moves;
   double* transition_probabilities;
   
-  // This is just to get gcc to shut up, it's actually initialized below.
-  number_of_adjacent_moves = malloc(0);
+  // This is just to get gcc to shut up, it's initialized with the proper (klp_matrix->length is increased in extend_klp_matrix_to_all_possible_positions) below.
+  number_of_adjacent_moves = calloc(klp_matrix->length, sizeof(double));
   
   if (parameters->single_bp_moves_only) {
     if (!parameters->bp_dist) {
       resolved = find_start_and_end_positions_in_klp_matrix(klp_matrix, *parameters, &start_index, &end_index);
-      
-      if (start_index > 0) {
-        distance_from_start = klp_matrix->l[start_index];
-      }
-      
-      if (end_index > 0) {
-        distance_from_end = klp_matrix->k[end_index];
-      }
-      
-      if (distance_from_start == distance_from_end && resolved) {
-        parameters->bp_dist = distance_from_start;
-      } else if (distance_from_start >= 0 && distance_from_end == -1) {
-        parameters->bp_dist = distance_from_start;
-      } else if (distance_from_end >= 0 && distance_from_start == -1) {
-        parameters->bp_dist = distance_from_end;
-      } else {
-        fprintf(stderr, "Can't infer the input structure distances for the energy grid. We found (0, %d) and (%d, 0). Consider using the -d flag to manually set the base pair distance between the two structures.\n", distance_from_end, distance_from_start);
-        printf("-3\n");
-        exit(0);
-      }
+      set_bp_dist_from_start_and_end_positions(*klp_matrix, parameters, start_index, end_index, resolved);
     }
     
     if (parameters->sequence_length) {
       extend_klp_matrix_to_all_possible_positions(klp_matrix, *parameters);
     }
     
-    number_of_adjacent_moves = calloc(klp_matrix->length, sizeof(double));
+    number_of_adjacent_moves = realloc(number_of_adjacent_moves, klp_matrix->length * sizeof(double));
     for (i = 0; i < klp_matrix->length; ++i) {
       number_of_adjacent_moves[i] = (double)number_of_permissible_single_bp_moves(klp_matrix, i);
     }
@@ -274,6 +255,32 @@ int find_start_and_end_positions_in_klp_matrix(KLP_MATRIX* klp_matrix, MFPT_PARA
   printf("resolved:\t%d\n", resolved);
   #endif
   return resolved;
+}
+
+void set_bp_dist_from_start_and_end_positions(KLP_MATRIX klp_matrix, MFPT_PARAMETERS* parameters, int start_index, int end_index, int resolved) {
+  int distance_from_start, distance_from_end;
+  
+  distance_from_start = distance_from_end = -1;
+  
+  if (start_index > 0) {
+    distance_from_start = klp_matrix.l[start_index];
+  }
+  
+  if (end_index > 0) {
+    distance_from_end = klp_matrix.k[end_index];
+  }
+  
+  if (distance_from_start == distance_from_end && resolved) {
+    parameters->bp_dist = distance_from_start;
+  } else if (distance_from_start >= 0 && distance_from_end == -1) {
+    parameters->bp_dist = distance_from_start;
+  } else if (distance_from_end >= 0 && distance_from_start == -1) {
+    parameters->bp_dist = distance_from_end;
+  } else {
+    fprintf(stderr, "Can't infer the input structure distances for the energy grid. We found (0, %d) and (%d, 0). Consider using the -d flag to manually set the base pair distance between the two structures.\n", distance_from_end, distance_from_start);
+    printf("-3\n");
+    exit(0);
+  }
 }
 
 void extend_klp_matrix_to_all_possible_positions(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS parameters) {
