@@ -29,7 +29,7 @@ endif
 
 RNAmfpt.out: $(CODE)/rna_mfpt.o $(CODE)/mfpt_params.o $(CODE)/mfpt_energy_grid.o $(CODE)/mfpt_parser.o $(CODE)/mfpt_initializers.o
 	$(CC) $(CODE)/rna_mfpt.o $(CODE)/mfpt_parser.o $(CODE)/mfpt_params.o $(CODE)/mfpt_energy_grid.o $(CODE)/mfpt_initializers.o $(LDFLAGS) RNAmfpt.out
-	ar cr $(LIB)/libmfpt.a $(CODE)/mfpt_parser.o $(CODE)/mfpt_energy_grid.o $(CODE)/mfpt_params.o $(CODE)/mfpt_initializers.o
+	ar cr $(LIB)/libmfpt.a $(CODE)/mfpt_energy_grid.o $(CODE)/mfpt_params.o $(CODE)/mfpt_initializers.o
 	
 $(CODE)/rna_mfpt.o: $(CODE)/rna_mfpt.c $(HEADER)/parser.h $(HEADER)/energy_grid.h $(HEADER)/constants.h $(HEADER)/params.h $(HEADER)/initializers.h
 	$(CC) $(CCFLAGS) $(CODE)/rna_mfpt.c -o $(CODE)/rna_mfpt.o
