@@ -31,6 +31,20 @@ double* init_transition_matrix(int length) {
   return calloc(length * length, sizeof(double));;
 }
 
+double* transpose_matrix(double* matrix, int length) {
+  int i, j;
+  double* transposed_matrix = init_transition_matrix(length);
+  
+  for (i = 0; i < length; ++i) {
+    for (j = 0; j < length; ++j) {
+      COL_ORDER(transposed_matrix, i, j, length) = ROW_ORDER(matrix, i, j, length);
+    }
+  }
+  
+  free_transition_matrix(matrix);
+  return transposed_matrix;
+}
+
 void free_transition_matrix(double* transition_matrix) {
   free(transition_matrix);
 }
