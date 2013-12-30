@@ -6,106 +6,64 @@
 #include "initializers.h"
 #include "energy_grid.h"
 
-#define DEBUG 1;
-
 double* convert_energy_grid_to_transition_matrix(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS* parameters) {
-  int i, j, start_index, end_index, resolved;
-  double row_sum;
+  int start_index, end_index, resolved;
   double* number_of_adjacent_moves;
-  double* transition_probabilities;
+  transition_probability probability_function = NULL;
   
-  // This is just to get gcc to shut up, it's initialized with the proper (klp_matrix->length is increased in extend_klp_matrix_to_all_possible_positions) below.
-  number_of_adjacent_moves = calloc(klp_matrix->length, sizeof(double));
-  
-  if (parameters->single_bp_moves_only) {
+  if (parameters->fully_connected) {
     if (!parameters->bp_dist) {
       resolved = find_start_and_end_positions_in_klp_matrix(klp_matrix, *parameters, &start_index, &end_index);
       set_bp_dist_from_start_and_end_positions(*klp_matrix, parameters, start_index, end_index, resolved);
     }
     
-    if (parameters->sequence_length) {
-      extend_klp_matrix_to_all_possible_positions(klp_matrix, *parameters);
-    }
-    
-    number_of_adjacent_moves = realloc(number_of_adjacent_moves, klp_matrix->length * sizeof(double));
-    for (i = 0; i < klp_matrix->length; ++i) {
-      number_of_adjacent_moves[i] = (double)number_of_permissible_single_bp_moves(klp_matrix, i);
-    }
-    
-    #ifdef DEBUG
-    printf("\nFull dataset:\n");
-    for (i = 0; i < klp_matrix->length; ++i) {
-      printf("%d\t%d\t%f\t%d possible moves\n", klp_matrix->k[i], klp_matrix->l[i], klp_matrix->p[i], (int)number_of_adjacent_moves[i]);
-    }
-    #endif
+    extend_klp_matrix_to_all_possible_positions(klp_matrix, *parameters);
   }
-  
-  transition_probabilities = init_transition_matrix(klp_matrix->length);
     
-  for (i = 0; i < klp_matrix->length; ++i) {
-    row_sum = 0.;
-    
-    for (j = 0; j < klp_matrix->length; ++j) {
-      if (i != j) {        
-        if (parameters->single_bp_moves_only) {
-          if ((int)abs(klp_matrix->k[i] - klp_matrix->k[j]) == 1 && (int)abs(klp_matrix->l[i] - klp_matrix->l[j]) == 1) {
-            // The problem here is that the position we're transitioning to has to be non-zero. So what happens is that if the starting position has a 0 probability
-            // and it's adjacent positions have zero probabilities as well, this code won't do shit. So what we really need to do is allow arbitrary transitions on the
-            // grid, which means that we no longe need to use the Hastings adjustment for detailed balance. In this way, it's always possible to leave a 0-probability
-            // position, but I'm not sure it makes complete sense.
-            printf("%d, %d => %d, %d\n", klp_matrix->k[i], klp_matrix->l[i], klp_matrix->k[j], klp_matrix->l[j]);
-            
-            if (parameters->sequence_length && klp_matrix->p[i] == 0 && klp_matrix->p[j] > 0) {
-              printf("Transitioning from p(%d, %d) = 0 to p(%d, %d) = %f\n", klp_matrix->k[i], klp_matrix->l[i], klp_matrix->k[j], klp_matrix->l[j], klp_matrix->p[j]);
-              radial_probability(klp_matrix, i, parameters->sequence_length);
-            }
-            
-            if (parameters->hastings) {
-              if (parameters->energy_based) {
-                ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
-                    transition_rate_from_energies_with_hastings(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
-              } else {
-                ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
-                    transition_rate_from_probabilities_with_hastings(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i], number_of_adjacent_moves[j]);
-              }
-            } else {
-              if (parameters->energy_based) {
-                ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
-                    transition_rate_from_energies(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i]);
-              } else {
-                ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
-                    transition_rate_from_probabilities(klp_matrix->p[i], klp_matrix->p[j], number_of_adjacent_moves[i]);
-              }
-            }
-          }
-        } else {
-          if (parameters->energy_based) {
-            ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
-                transition_rate_from_energies(klp_matrix->p[i], klp_matrix->p[j], (double)(klp_matrix->length - 1));
-          } else {
-            ROW_ORDER(transition_probabilities, i, j, klp_matrix->length) = \
-                transition_rate_from_probabilities(klp_matrix->p[i], klp_matrix->p[j], (double)(klp_matrix->length - 1));
-          }
-        }
-        
-        row_sum += ROW_ORDER(transition_probabilities, i, j, klp_matrix->length);
-      }
-    }
-    
-    ROW_ORDER(transition_probabilities, i, i, klp_matrix->length) = 1 - row_sum;
-  }
+  number_of_adjacent_moves = populate_number_of_adjacent_moves(*klp_matrix, *parameters);
   
-  return transition_probabilities;
-}
-
-double compute_mfpt(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS parameters, double* transition_probabilities) {
-  int i, j, x, y, start_index, end_index, resolved, inversion_matrix_row_length = klp_matrix->length - 1;
-  double mfpt_from_start;
-  
+  #ifdef DEBUG
+  int i;
   printf("\nFull dataset:\n");
   for (i = 0; i < klp_matrix->length; ++i) {
-    printf("%d\t%d\t%d\t%f\n", i, klp_matrix->k[i], klp_matrix->l[i], klp_matrix->p[i]);
+    printf("%d\t%d\t%f\t%d possible move(s)\n", klp_matrix->k[i], klp_matrix->l[i], klp_matrix->p[i], (int)number_of_adjacent_moves[i]);
   }
+  printf("\n");
+  #endif
+  
+  switch (10 * parameters->hastings + parameters->energy_based) {
+    case 0: 
+      probability_function = &transition_rate_from_probabilities;
+      #ifdef DEBUG
+        printf("probability_function: transition_rate_from_probabilities\n");
+      #endif
+      break;
+    case 1: 
+      probability_function = &transition_rate_from_energies;
+      #ifdef DEBUG
+        printf("probability_function: transition_rate_from_energies\n");
+      #endif
+      break;
+    case 10: 
+      probability_function = &transition_rate_from_probabilities_with_hastings;
+      #ifdef DEBUG
+        printf("probability_function: transition_rate_from_probabilities_with_hastings\n");
+      #endif
+      break;
+    case 11: 
+      probability_function = &transition_rate_from_energies_with_hastings;
+      #ifdef DEBUG
+        printf("probability_function: transition_rate_from_energies_with_hastings\n");
+      #endif
+      break;
+  }
+  
+  return populate_transition_matrix_from_stationary_matrix(*klp_matrix, *parameters, number_of_adjacent_moves, probability_function);
+}
+
+double compute_mfpt(KLP_MATRIX* klp_matrix, const MFPT_PARAMETERS parameters, const double* transition_probabilities) {
+  int i, j, x, y, start_index, end_index, resolved, inversion_matrix_row_length = klp_matrix->length - 1;
+  double mfpt_from_start;
   
   resolved = find_start_and_end_positions_in_klp_matrix(klp_matrix, parameters, &start_index, &end_index);
   
@@ -222,7 +180,7 @@ double* pseudoinverse(double* a, int size) {
   return (b);
 }
 
-int find_start_and_end_positions_in_klp_matrix(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS parameters, int* start_index, int* end_index) {
+int find_start_and_end_positions_in_klp_matrix(KLP_MATRIX* klp_matrix, const MFPT_PARAMETERS parameters, int* start_index, int* end_index) {
   int i, resolved = 0;
   
   if (parameters.start_state == -1) {
@@ -257,7 +215,7 @@ int find_start_and_end_positions_in_klp_matrix(KLP_MATRIX* klp_matrix, MFPT_PARA
   return resolved;
 }
 
-void set_bp_dist_from_start_and_end_positions(KLP_MATRIX klp_matrix, MFPT_PARAMETERS* parameters, int start_index, int end_index, int resolved) {
+void set_bp_dist_from_start_and_end_positions(const KLP_MATRIX klp_matrix, MFPT_PARAMETERS* parameters, int start_index, int end_index, int resolved) {
   int distance_from_start, distance_from_end;
   
   distance_from_start = distance_from_end = -1;
@@ -281,10 +239,15 @@ void set_bp_dist_from_start_and_end_positions(KLP_MATRIX klp_matrix, MFPT_PARAME
     printf("-3\n");
     exit(0);
   }
+  
+  #ifdef DEBUG
+  printf("bp_dist:\t%d\n", parameters->bp_dist);
+  #endif
 }
 
-void extend_klp_matrix_to_all_possible_positions(KLP_MATRIX* klp_matrix, MFPT_PARAMETERS parameters) {
+void extend_klp_matrix_to_all_possible_positions(KLP_MATRIX* klp_matrix, const MFPT_PARAMETERS parameters) {
   int i, j, m, position_in_input_data, pointer, valid_positions = 0;
+  double* radial_probabilities;
   
   #ifdef DEBUG
   printf("\nAccessible positions (top-left is [0, 0]):\n");
@@ -357,19 +320,44 @@ void extend_klp_matrix_to_all_possible_positions(KLP_MATRIX* klp_matrix, MFPT_PA
       }
     }
   }
+  
+  // Done this way to cache the radial probabilities. We can tell them apart from normal probabilities because they are set to negative values.
+  radial_probabilities = malloc((valid_positions - klp_matrix->length) * sizeof(double));
+  
+  for (i = 0; i < valid_positions - klp_matrix->length; ++i) {
+    radial_probabilities[i] = -radial_probability(*klp_matrix, klp_matrix->length + i, parameters.sequence_length);
+  }
+  
+  for (i = 0; i < valid_positions - klp_matrix->length; ++i) {
+    klp_matrix->p[klp_matrix->length + i] = radial_probabilities[i];
+  }
+  
+  free(radial_probabilities);
 
   klp_matrix->length = valid_positions;
 }
 
-int number_of_permissible_single_bp_moves(KLP_MATRIX* klp_matrix, int i) {
+double* populate_number_of_adjacent_moves(const KLP_MATRIX klp_matrix, const MFPT_PARAMETERS parameters) {
+  int i;
+  double* number_of_adjacent_moves;
+  
+  number_of_adjacent_moves = malloc(klp_matrix.length * sizeof(double));
+  for (i = 0; i < klp_matrix.length; ++i) {
+    number_of_adjacent_moves[i] = parameters.single_bp_moves_only ? (double)number_of_permissible_single_bp_moves(klp_matrix, i) : (double)(klp_matrix.length - 1);
+  }
+  
+  return number_of_adjacent_moves;
+}
+
+int number_of_permissible_single_bp_moves(const KLP_MATRIX klp_matrix, int i) {
   int j, x, y, a, b, num_moves = 0;
   
-  x = klp_matrix->k[i];
-  y = klp_matrix->l[i];
+  x = klp_matrix.k[i];
+  y = klp_matrix.l[i];
   
-  for (j = 0; j < klp_matrix->length; ++j) {
-    a = klp_matrix->k[j];
-    b = klp_matrix->l[j];
+  for (j = 0; j < klp_matrix.length; ++j) {
+    a = klp_matrix.k[j];
+    b = klp_matrix.l[j];
     
     if (
       // Because N(x, y) is restricted to entries in *k and *l, we *assume* the input data satisfies the triangle inequality and bounds.
@@ -382,12 +370,50 @@ int number_of_permissible_single_bp_moves(KLP_MATRIX* klp_matrix, int i) {
   return num_moves;
 }
 
-double radial_probability(KLP_MATRIX* klp_matrix, int klp_index, int row_size) {
+double* populate_transition_matrix_from_stationary_matrix(const KLP_MATRIX klp_matrix, const MFPT_PARAMETERS parameters, const double* number_of_adjacent_moves, transition_probability probability_function) {
+  int i, j;
+  double row_sum;
+  double* transition_matrix;
+  
+  transition_matrix = init_transition_matrix(klp_matrix.length);
+  
+  for (i = 0; i < klp_matrix.length; ++i) {
+    row_sum = 0.;
+    
+    for (j = 0; j < klp_matrix.length; ++j) {
+      if (i != j) {        
+        if (parameters.single_bp_moves_only) {
+          // Single step moves only. We allow energy transitions or probability transitions, and optional Hastings usage.
+          if ((int)abs(klp_matrix.k[i] - klp_matrix.k[j]) == 1 && (int)abs(klp_matrix.l[i] - klp_matrix.l[j]) == 1) {
+            ROW_ORDER(transition_matrix, i, j, klp_matrix.length) = probability_function(klp_matrix, number_of_adjacent_moves, i, j);
+          }
+        } else if (parameters.fully_connected) {
+          // Moves allowed between arbitrary positions. This means we have a full stationary matrix that may have zero-probability entries.
+          if (klp_matrix.p[i] > 0 && klp_matrix.p[j] > 0) {
+            // Both states are non-zero.
+            ROW_ORDER(transition_matrix, i, j, klp_matrix.length) = probability_function(klp_matrix, number_of_adjacent_moves, i, j);
+          } else if (klp_matrix.p[i] < 0 && klp_matrix.p[j] > 0) {
+            // Going from a zero-probability state (encoded in klp_matrix as < 0) to a non-zero probability state.
+            ROW_ORDER(transition_matrix, i, j, klp_matrix.length) = transition_rate_from_radial_probability(klp_matrix, number_of_adjacent_moves, i, j);
+          }
+        }
+        
+        row_sum += ROW_ORDER(transition_matrix, i, j, klp_matrix.length);
+      }
+    }
+    
+    ROW_ORDER(transition_matrix, i, i, klp_matrix.length) = 1 - row_sum;
+  }
+  
+  return transition_matrix;
+}
+
+double radial_probability(const KLP_MATRIX klp_matrix, int klp_index, int row_size) {
   int distance, i, j, k, x, y, a, b, found_klp_index, found_nonzero_probability = 0;
   double probability_sum = 0;
   
-  x = klp_matrix->k[klp_index];
-  y = klp_matrix->l[klp_index];
+  x = klp_matrix.k[klp_index];
+  y = klp_matrix.l[klp_index];
   
   for (distance = 1; distance < row_size && !found_nonzero_probability; ++distance) {
     for (i = 0; i <= distance; ++i) {
@@ -399,14 +425,16 @@ double radial_probability(KLP_MATRIX* klp_matrix, int klp_index, int row_size) {
           
           // Look for the position in the stationary probability data structure (assumes klp_matrix is populated with exactly all possible positions)
           found_klp_index = -1;
-          for (k = 0; k < klp_matrix->length && found_klp_index < 0; ++k) {
-            if (klp_matrix->k[k] == a && klp_matrix->l[k] == b) {
+          for (k = 0; k < klp_matrix.length && found_klp_index < 0; ++k) {
+            if (klp_matrix.k[k] == a && klp_matrix.l[k] == b) {
               found_klp_index = 1;
               
-              if (klp_matrix->p[k] > 0) {
-                printf("%d, %d: (distance %d (%d, %d) = %f)\n", x, y, distance, a, b, klp_matrix->p[k]);
+              if (klp_matrix.p[k] > 0) {
+                #ifdef SUPER_DEBUG
+                printf("%d, %d: (distance %d (%d, %d) = %f)\n", x, y, distance, a, b, klp_matrix.p[k]);
+                #endif
                 
-                probability_sum          += klp_matrix->p[k];
+                probability_sum          += klp_matrix.p[k];
                 found_nonzero_probability = 1;
               }
             }
@@ -416,23 +444,29 @@ double radial_probability(KLP_MATRIX* klp_matrix, int klp_index, int row_size) {
     }
   }
   
-  printf("probability_sum: %f\n", probability_sum);
+  #ifdef SUPER_DEBUG
+  printf("probability_sum: %f\n\n", probability_sum);
+  #endif
   
   return probability_sum;
 }
 
-double transition_rate_from_probabilities(double from, double to, double num_from) {
-  return MIN(1., to / from) / num_from;
+double transition_rate_from_probabilities(const KLP_MATRIX klp_matrix, const double* number_of_adjacent_moves, int i, int j) {
+  return MIN(1., klp_matrix.p[j] / klp_matrix.p[i]) / number_of_adjacent_moves[i];
 }
 
-double transition_rate_from_energies(double from, double to, double num_from) {
-  return MIN(1., exp(-(to - from) / RT)) / num_from;
+double transition_rate_from_energies(const KLP_MATRIX klp_matrix, const double* number_of_adjacent_moves, int i, int j) {
+  return MIN(1., exp(-(klp_matrix.p[j] - klp_matrix.p[i]) / RT)) / number_of_adjacent_moves[i];
 }
 
-double transition_rate_from_probabilities_with_hastings(double from, double to, double num_from, double num_to) {
-  return MIN(1., (num_from / num_to) * (to / from)) / num_from;
+double transition_rate_from_probabilities_with_hastings(const KLP_MATRIX klp_matrix, const double* number_of_adjacent_moves, int i, int j) {
+  return MIN(1., (number_of_adjacent_moves[i] / number_of_adjacent_moves[j]) * (klp_matrix.p[j] / klp_matrix.p[i])) / number_of_adjacent_moves[i];
 }
 
-double transition_rate_from_energies_with_hastings(double from, double to, double num_from, double num_to) {
-  return MIN(1., (num_from / num_to) * exp(-(to - from) / RT)) / num_from;
+double transition_rate_from_energies_with_hastings(const KLP_MATRIX klp_matrix, const double* number_of_adjacent_moves, int i, int j) {
+  return MIN(1., (number_of_adjacent_moves[i] / number_of_adjacent_moves[j]) * exp(-(klp_matrix.p[j] - klp_matrix.p[i]) / RT)) / number_of_adjacent_moves[i];
+}
+
+double transition_rate_from_radial_probability(const KLP_MATRIX klp_matrix, const double* number_of_adjacent_moves, int i, int j) {
+  return MIN(1., klp_matrix.p[j] / -klp_matrix.p[i]) / number_of_adjacent_moves[i];
 }

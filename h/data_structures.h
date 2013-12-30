@@ -9,11 +9,10 @@ typedef struct {
   short energy_based;
   short transition_matrix_input;
   short pseudoinverse;
+  short fully_connected;
   short single_bp_moves_only;
   short hastings;
   short verbose;
-  double additive_epsilon;
-  double distributed_epsilon;
 } MFPT_PARAMETERS;
 
 typedef struct {
@@ -22,5 +21,7 @@ typedef struct {
   double* p;
   int length;
 } KLP_MATRIX;
+
+typedef double (*transition_probability)(const KLP_MATRIX, const double*, int, int);
 
 #endif
