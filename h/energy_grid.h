@@ -15,12 +15,14 @@ int dgels_(char* t, int* m, int* n, int* nrhs, double* a, int* lda, double* b, i
 }
 #endif
 
-double* convert_energy_grid_to_transition_matrix(KLP_MATRIX*, MFPT_PARAMETERS);
-double compute_mfpt(KLP_MATRIX, MFPT_PARAMETERS, double*);
+double* convert_energy_grid_to_transition_matrix(KLP_MATRIX*, MFPT_PARAMETERS*);
+double compute_mfpt(KLP_MATRIX*, MFPT_PARAMETERS, double*);
 double* inverse(double*, int);
 double* pseudoinverse(double*, int);
-int number_of_permissible_single_bp_moves(int, int, KLP_MATRIX);
-int find_start_and_end_positions_in_klp_matrix(KLP_MATRIX, MFPT_PARAMETERS, int*, int*);
+int find_start_and_end_positions_in_klp_matrix(KLP_MATRIX*, MFPT_PARAMETERS, int*, int*);
+void extend_klp_matrix_to_all_possible_positions(KLP_MATRIX*, MFPT_PARAMETERS);
+int number_of_permissible_single_bp_moves(KLP_MATRIX*, int);
+double radial_probability(KLP_MATRIX*, int, int);
 double transition_rate_from_probabilities(double, double, double);
 double transition_rate_from_energies(double, double, double);
 double transition_rate_from_probabilities_with_hastings(double, double, double, double);

@@ -44,13 +44,13 @@ int main(int argc, char* argv[]) {
     
     // We have an energy grid, this requires converting the energy grid into a transition matrix data structure before finding MFPT.
   } else {
-    transition_matrix = convert_energy_grid_to_transition_matrix(&klp_matrix, parameters);
+    transition_matrix = convert_energy_grid_to_transition_matrix(&klp_matrix, &parameters);
   }
   
   #if SUPER_HEAVY_DEBUG
   print_transition_matrix(klp_matrix, transition_matrix);
   #endif
-  mfpt = compute_mfpt(klp_matrix, parameters, transition_matrix);
+  mfpt = compute_mfpt(&klp_matrix, parameters, transition_matrix);
   printf("%+.8f\n", mfpt);
   free_transition_matrix(transition_matrix);
   free_klp_matrix(klp_matrix);

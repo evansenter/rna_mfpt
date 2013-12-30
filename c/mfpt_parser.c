@@ -40,7 +40,7 @@ void populate_arrays(char* file_path, KLP_MATRIX klp_matrix, MFPT_PARAMETERS par
     klp_matrix.p[i]  = atof(token);
 
     if (!parameters.energy_based && (klp_matrix.p[i] < 0 || klp_matrix.p[i] > 1)) {
-      fprintf(stderr, "Error: line number %d (0-indexed) in the input doesn't satisfy 0 <= probability (%+1.2f) <= 1. Did you forget the -E flag?\n\n", i, klp_matrix.p[i]);
+      fprintf(stderr, "Error: line number %d (0-indexed) in the input doesn't satisfy 0 <= probability (%+1.2f) <= 1. Did you forget the -e flag?\n\n", i, klp_matrix.p[i]);
       mfpt_usage();
     }
 

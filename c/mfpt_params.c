@@ -198,8 +198,9 @@ int mfpt_error_handling(MFPT_PARAMETERS parameters) {
     error++;
   }
   
-  if (parameters.single_bp_moves_only && parameters.energy_based && (parameters.sequence_length || parameters.additive_epsilon)) {
-    fprintf(stderr, "Error: If the -x and -e flags are provided, -n and -o are not permitted!\n");
+  if (parameters.single_bp_moves_only && parameters.energy_based && (parameters.sequence_length || parameters.additive_epsilon || parameters.distributed_epsilon)) {
+    fprintf(stderr, "Error: If the -x and -e flags are provided, -n, -o and -q are not permitted!\n");
+    fprintf(stderr, "\tThis is because it's not possible to add non-zero values to an energy based energy grid without converting the grid to probabilities\n");
     error++;
   }
   
@@ -208,11 +209,11 @@ int mfpt_error_handling(MFPT_PARAMETERS parameters) {
     error++;
   }
   
-  if ((parameters.sequence_length && !(parameters.additive_epsilon || parameters.distributed_epsilon)) ||
-      (!parameters.sequence_length && (parameters.additive_epsilon || parameters.distributed_epsilon))) {
-    fprintf(stderr, "Error: The -n flag must be used with exactly one of the -o or -q flags!\n");
-    error++;
-  }
+  // if ((parameters.sequence_length && !(parameters.additive_epsilon || parameters.distributed_epsilon)) ||
+  //     (!parameters.sequence_length && (parameters.additive_epsilon || parameters.distributed_epsilon))) {
+  //   fprintf(stderr, "Error: The -n flag must be used with exactly one of the -o or -q flags!\n");
+  //   error++;
+  // }
   
   if (parameters.additive_epsilon && parameters.distributed_epsilon) {
     fprintf(stderr, "Error: The -o and -q flags are not permitted together!\n");
