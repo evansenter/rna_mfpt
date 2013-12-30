@@ -430,7 +430,7 @@ double radial_probability(const KLP_MATRIX klp_matrix, int klp_index, int row_si
               found_klp_index = 1;
               
               if (klp_matrix.p[k] > 0) {
-                #ifdef SUPER_DEBUG
+                #ifdef INSANE_DEBUG
                 printf("%d, %d: (distance %d (%d, %d) = %f)\n", x, y, distance, a, b, klp_matrix.p[k]);
                 #endif
                 
@@ -444,7 +444,7 @@ double radial_probability(const KLP_MATRIX klp_matrix, int klp_index, int row_si
     }
   }
   
-  #ifdef SUPER_DEBUG
+  #ifdef INSANE_DEBUG
   printf("probability_sum: %f\n\n", probability_sum);
   #endif
   
