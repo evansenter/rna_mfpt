@@ -24,7 +24,7 @@ void set_bp_dist_from_start_and_end_positions(const KLP_MATRIX, MFPT_PARAMETERS*
 void extend_klp_matrix_to_all_possible_positions(KLP_MATRIX*, const MFPT_PARAMETERS);
 double* populate_number_of_adjacent_moves(const KLP_MATRIX, const MFPT_PARAMETERS);
 int number_of_permissible_single_bp_moves(const KLP_MATRIX, int);
-double* populate_transition_matrix_from_stationary_matrix(const KLP_MATRIX, const MFPT_PARAMETERS, const double*, transition_probability);
+double* populate_transition_matrix_from_stationary_matrix(const KLP_MATRIX, const MFPT_PARAMETERS, const double*, transition_probability, short);
 double radial_probability(const KLP_MATRIX, int, int);
 double transition_rate_from_probabilities(const KLP_MATRIX, const double*, int, int);
 double transition_rate_from_energies(const KLP_MATRIX, const double*, int, int);

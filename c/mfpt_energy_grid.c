@@ -58,7 +58,7 @@ double* convert_energy_grid_to_transition_matrix(KLP_MATRIX* klp_matrix, MFPT_PA
       break;
   }
   
-  return populate_transition_matrix_from_stationary_matrix(*klp_matrix, *parameters, number_of_adjacent_moves, probability_function);
+  return populate_transition_matrix_from_stationary_matrix(*klp_matrix, *parameters, number_of_adjacent_moves, probability_function, 0);
 }
 
 double compute_mfpt(KLP_MATRIX* klp_matrix, const MFPT_PARAMETERS parameters, const double* transition_probabilities) {
@@ -370,7 +370,7 @@ int number_of_permissible_single_bp_moves(const KLP_MATRIX klp_matrix, int i) {
   return num_moves;
 }
 
-double* populate_transition_matrix_from_stationary_matrix(const KLP_MATRIX klp_matrix, const MFPT_PARAMETERS parameters, const double* number_of_adjacent_moves, transition_probability probability_function) {
+double* populate_transition_matrix_from_stationary_matrix(const KLP_MATRIX klp_matrix, const MFPT_PARAMETERS parameters, const double* number_of_adjacent_moves, transition_probability probability_function, short rate_matrix) {
   int i, j;
   double row_sum;
   double* transition_matrix;
@@ -402,7 +402,7 @@ double* populate_transition_matrix_from_stationary_matrix(const KLP_MATRIX klp_m
       }
     }
     
-    ROW_ORDER(transition_matrix, i, i, klp_matrix.length) = 1 - row_sum;
+    ROW_ORDER(transition_matrix, i, i, klp_matrix.length) = rate_matrix ? -row_sum : 1 - row_sum;
   }
   
   return transition_matrix;
