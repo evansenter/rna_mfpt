@@ -4,11 +4,11 @@
 #include "initializers.h"
 #include "energy_grid.h"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char** argv) {
   int i, line_count, row_length;
   double mfpt;
   double* transition_matrix;
-  MFPT_PARAMETERS parameters;
+  MFPT_PARAMS parameters;
   KLP_MATRIX klp_matrix;
   parameters = parse_mfpt_args(argc, argv);
   line_count = count_lines(argv[argc - 1]);
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     
     // We have an energy grid, this requires converting the energy grid into a transition matrix data structure before finding MFPT.
   } else {
-    transition_matrix = convert_energy_grid_to_transition_matrix(&klp_matrix, &parameters);
+    transition_matrix = convert_klp_matrix_to_transition_matrix(&klp_matrix, &parameters);
   }
   
   #if SUPER_HEAVY_DEBUG

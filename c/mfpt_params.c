@@ -6,11 +6,11 @@
 #include <ctype.h>
 #include "params.h"
 
-MFPT_PARAMETERS init_mfpt_params() {
-  MFPT_PARAMETERS parameters = {
+MFPT_PARAMS init_mfpt_params() {
+  MFPT_PARAMS parameters = {
     .start_state             = -1,
     .end_state               = -1,
-    .sequence_length         = 0,
+    .seq_length              = 0,
     .bp_dist                 = 0,
     .energy_based            = 0,
     .transition_matrix_input = 0,
@@ -18,17 +18,18 @@ MFPT_PARAMETERS init_mfpt_params() {
     .fully_connected         = 0,
     .single_bp_moves_only    = 0,
     .hastings                = 0,
+    .rate_matrix             = 0,
     .verbose                 = 0
   };
   return parameters;
 }
 
-MFPT_PARAMETERS parse_mfpt_args(int argc, char* argv[]) {
+MFPT_PARAMS parse_mfpt_args(int argc, char** argv) {
   int c;
-  MFPT_PARAMETERS parameters;
+  MFPT_PARAMS parameters;
   parameters = init_mfpt_params();
   
-  while ((c = getopt(argc, argv, "EeTtPpXxHhVvA:a:Z:z:N:n:D:d:")) != -1) {
+  while ((c = getopt(argc, argv, "EeTtPpXxHhRrVvA:a:Z:z:N:n:D:d:")) != -1) {
     switch (c) {
       case 'E':
       case 'e':
@@ -53,6 +54,11 @@ MFPT_PARAMETERS parse_mfpt_args(int argc, char* argv[]) {
       case 'H':
       case 'h':
         parameters.hastings = 1;
+        break;
+        
+      case 'R':
+      case 'r':
+        parameters.rate_matrix = 1;
         break;
         
       case 'V':
@@ -82,9 +88,9 @@ MFPT_PARAMETERS parse_mfpt_args(int argc, char* argv[]) {
         
       case 'N':
       case 'n':
-        if (!sscanf(optarg, "%d", &(parameters.sequence_length))) {
+        if (!sscanf(optarg, "%d", &(parameters.seq_length))) {
           mfpt_usage();
-        } else if (parameters.sequence_length <= 0) {
+        } else if (parameters.seq_length <= 0) {
           mfpt_usage();
         }
         
@@ -144,7 +150,7 @@ MFPT_PARAMETERS parse_mfpt_args(int argc, char* argv[]) {
   return parameters;
 }
 
-int mfpt_error_handling(MFPT_PARAMETERS parameters) {
+int mfpt_error_handling(MFPT_PARAMS parameters) {
   int error = 0;
   
   // Type of run check.
@@ -166,8 +172,8 @@ int mfpt_error_handling(MFPT_PARAMETERS parameters) {
   }
   
   // Fully connected graph restrictions.
-  if (parameters.fully_connected && (parameters.hastings || parameters.energy_based)) {
-    fprintf(stderr, "Error: If the -n flag is provided, -h and -e are not permitted!\n");
+  if (parameters.fully_connected && (parameters.hastings || parameters.energy_based || ((parameters.start_state || parameters.end_state) && !parameters.bp_dist))) {
+    fprintf(stderr, "Error: If the -n flag is provided, -h and -e are not permitted (or -a and -z without -d)!\n");
     error++;
   }
   
@@ -184,7 +190,7 @@ int mfpt_error_handling(MFPT_PARAMETERS parameters) {
   return error;
 }
 
-void debug_mfpt_parameters(MFPT_PARAMETERS parameters) {
+void debug_mfpt_parameters(MFPT_PARAMS parameters) {
   char* buffer = calloc(128, sizeof(char));
   
   printf("(e) energy_based\t\t%s\n",          parameters.energy_based            ? "Yes" : "No");
@@ -193,10 +199,11 @@ void debug_mfpt_parameters(MFPT_PARAMETERS parameters) {
   printf("(x) single_bp_moves_only\t%s\n",    parameters.single_bp_moves_only    ? "Yes" : "No");
   printf("(n) fully_connected\t\t%s\n",       parameters.fully_connected         ? "Yes" : "No");
   printf("(h) hastings\t\t\t%s\n",            parameters.hastings                ? "Yes" : "No");
+  printf("(r) rate_matrix\t\t\t%s\n",         parameters.rate_matrix             ? "Yes" : "No");
   
   memset(buffer, ' ', 128 * sizeof(char));
-  sprintf(buffer, "%d", parameters.sequence_length);
-  printf("(n) sequence_length\t\t%s\n", parameters.sequence_length ? buffer : "N/A");
+  sprintf(buffer, "%d", parameters.seq_length);
+  printf("(n) seq_length\t\t\t%s\n", parameters.seq_length ? buffer : "N/A");
   
   memset(buffer, ' ', 128 * sizeof(char));
   sprintf(buffer, "%d", parameters.bp_dist);
@@ -224,6 +231,7 @@ void mfpt_usage() {
   fprintf(stderr, "-H/h\tHastings adjustment, the default is disabled. If this flag is provided, the input must be in the form of an energy grid, and only diagonally adjacent moves are permitted (in the all-to-all transition case, N(X) / N(Y) == 1). Calculating N(X) and N(Y) will respect grid boundaries and the triangle equality, and the basepair distance between the two structures for kinetics is inferred from the energy grid.\n");
   fprintf(stderr, "-N/n\tsequence length, the default is disabled. This flag represents the sequence length of the sequence on which kinetics is being performed. It is used to ensure that the graph is fully connected.\n");
   fprintf(stderr, "-P/p\tpseudoinverse, the default is disabled. If this flag is provided, the Moore-Penrose pseudoinverse is computed for the transition probability matrix, rather than the true inverse.\n");
+  fprintf(stderr, "-R/r\trate matrix, the default is disabled. If this flag is provided, the transition rate matrix is computed rather than the transition probability matrix.\n");
   fprintf(stderr, "-T/t\ttransition matrix input, the default is disabled. If this flag is provided, the input is expected to be a transition probability matrix, rather than a 2D energy grid. In this case, the first two columns in the CSV file are row-order indices into the transition probability matrix, and the third (final) column is the transition probability of that cell.\n");
   fprintf(stderr, "-V/v\tverbose, the default is disabled. If this flag is provided, light debug data will be printed. To enable heavy debugging, use the flags in mfpt_constants.h\n");
   fprintf(stderr, "-X/x\tsingle basepair moves, the default is disabled. If this flag is provided, the input must be in the form of an energy grid, and only diagonally adjacent moves are permitted. This option makes the assumption that the input is *not* a transition probability matrix already, and the input energy grid already satisfies the triangle inequality / parity condition.\n");

@@ -25,7 +25,7 @@ int count_lines(char* file_path) {
   return line_count;
 }
 
-void populate_arrays(char* file_path, KLP_MATRIX klp_matrix, MFPT_PARAMETERS parameters) {
+void populate_arrays(char* file_path, KLP_MATRIX klp_matrix, MFPT_PARAMS parameters) {
   int i = 0;
   FILE* file = fopen(file_path, "r");
   char* token;

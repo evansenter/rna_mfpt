@@ -20,10 +20,10 @@ void free_klp_matrix(KLP_MATRIX klp_matrix) {
 
 void print_klp_matrix(KLP_MATRIX klp_matrix) {
   int i;
-  printf("\nk/l/p matrix:\n");
+  printf("\nk/l/p matrix (index, k, l, p):\n");
 
   for (i = 0; i < klp_matrix.length; ++i) {
-    printf("%d\t%d\t%.8f\n", klp_matrix.k[i], klp_matrix.l[i], klp_matrix.p[i]);
+    printf("%d\t%d\t%d\t%.8f\n", i, klp_matrix.k[i], klp_matrix.l[i], klp_matrix.p[i]);
   }
 }
 
@@ -50,11 +50,20 @@ void free_transition_matrix(double* transition_matrix) {
 }
 
 void print_transition_matrix(KLP_MATRIX klp_matrix, double* transition_matrix) {
-  int i;
+  int i, j;
   printf("Transition matrix:\n");
-  printf("(x)\t(y)\tp(x, y)\n");
+  printf("(from)\t(to)\tp(to | from)\n");
 
   for (i = 0; i < klp_matrix.length; ++i) {
-    printf("(%d)\t=>\t(%d)\t%.8f\n", klp_matrix.k[i], klp_matrix.l[i], ROW_ORDER(transition_matrix, klp_matrix.k[i], klp_matrix.l[i], klp_matrix.length));
+    for (j = 0; j < klp_matrix.length; ++j) {
+      printf(
+        "(%d, %d)\t=>\t(%d, %d)\t%.8f\n", 
+        klp_matrix.k[i], 
+        klp_matrix.l[i], 
+        klp_matrix.k[j], 
+        klp_matrix.l[j], 
+        ROW_ORDER(transition_matrix, i, j, klp_matrix.length)
+      );
+    }
   }
 }

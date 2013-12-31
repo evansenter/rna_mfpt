@@ -4,7 +4,7 @@
 typedef struct {
   int start_state;
   int end_state;
-  int sequence_length;
+  int seq_length;
   int bp_dist;
   short energy_based;
   short transition_matrix_input;
@@ -12,8 +12,9 @@ typedef struct {
   short fully_connected;
   short single_bp_moves_only;
   short hastings;
+  short rate_matrix;
   short verbose;
-} MFPT_PARAMETERS;
+} MFPT_PARAMS;
 
 typedef struct {
   int* k;
@@ -22,6 +23,6 @@ typedef struct {
   int length;
 } KLP_MATRIX;
 
-typedef double (*transition_probability)(const KLP_MATRIX, const double*, int, int);
+typedef double (*transition_probability)(const KLP_MATRIX, const double*, int, int, short);
 
 #endif
