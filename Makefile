@@ -1,7 +1,7 @@
 # Makefile for RNAmfpt
 
 CCFLAGS          = -c -std=gnu99 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I $(HEADER) -I $(SHARED_HEADER)
-LDFLAGS          = -lm -lgomp -llapack -L/usr/local/include -L/usr/local/modules/lapack/3.4.2/include/ -llapacke -lgslcblas -lgsl -o
+LDFLAGS          = -L . -L $(LIB)/ -L /usr/local/include -lm -lgomp -llapack -lgslcblas -lgsl -o
 BINDIR           = ~/bin
 LIBDIR           = ~/lib
 CC               = gcc
