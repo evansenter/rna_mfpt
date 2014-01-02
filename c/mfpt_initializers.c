@@ -23,8 +23,10 @@ void print_klp_matrix(KLP_MATRIX klp_matrix) {
   printf("\nk/l/p matrix (index, k, l, p):\n");
 
   for (i = 0; i < klp_matrix.length; ++i) {
-    printf("%d\t%d\t%d\t%.8f\n", i, klp_matrix.k[i], klp_matrix.l[i], klp_matrix.p[i]);
+    printf("%d\t%d\t%d\t%+.8f\n", i, klp_matrix.k[i], klp_matrix.l[i], klp_matrix.p[i]);
   }
+  
+  printf("\n");
 }
 
 double* init_transition_matrix(int length) {
@@ -66,4 +68,6 @@ void print_transition_matrix(KLP_MATRIX klp_matrix, double* transition_matrix) {
       );
     }
   }
+  
+  printf("\n");
 }

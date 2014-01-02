@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "initializers.h"
 #include "energy_grid.h"
+#include "constants.h"
 
 int main(int argc, char** argv) {
   int i, line_count, row_length;

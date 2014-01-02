@@ -4,14 +4,16 @@
 typedef struct {
   int start_state;
   int end_state;
-  int seq_length;
+  int max_dist;
   int bp_dist;
+  double epsilon;
   short energy_based;
   short transition_matrix_input;
   short pseudoinverse;
   short fully_connected;
   short single_bp_moves_only;
   short hastings;
+  short radial_probability;
   short rate_matrix;
   short verbose;
 } MFPT_PARAMS;
